@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#264639">
+  <meta name="description" content="My Boss · 4 năm bên nhau, ngàn khoảnh khắc thương yêu. Cuốn album kỷ niệm tình yêu 12.11.">
+  <title>My Boss · 4 Năm Bên Nhau (12.11)</title>
+  
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%236b9080'/%3E%3Ctext x='11' y='46' font-size='38'%3E🌿%3C/text%3E%3C/svg%3E">
+  
+  <!-- Google Fonts: Lora, Be Vietnam Pro, Dancing Script -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Dancing+Script:wght@500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  <script src="photos.js" defer></script>
+  <script src="love-music.js" defer></script>
+  <script src="effects.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body class="immersive">
+
+  <!-- Header controls -->
+  <header class="reader-header">
+    <a class="brand" href="#home" id="home-link" aria-label="Về bìa album">
+      <span aria-hidden="true">🌿</span> My Boss<span class="brand-dot">.</span>
+    </a>
+    <span class="edition">KỶ NIỆM 4 NĂM YÊU NHAU · 12.11</span>
+    <div class="header-actions">
+      <button class="music-toggle" id="music-toggle" type="button" aria-pressed="false" aria-label="Bật nhạc tình yêu">
+        <span class="music-icon" aria-hidden="true">♫</span>
+        <span class="music-label">Bật nhạc</span>
+      </button>
+      <button class="contents-button" id="open-contents" type="button">
+        <span aria-hidden="true">☷</span> Mục lục
+      </button>
+    </div>
+  </header>
+
+  <!-- Main book reader -->
+  <main class="reader" aria-label="Cuốn album kỷ niệm 4 năm của Boss">
+    <div class="chapter-bar">
+      <span class="chapter-overline" id="chapter-overline">KỶ NIỆM 4 NĂM YÊU NHAU</span>
+      <p id="chapter-title">4 năm bên em, ngàn điều tuyệt vời.</p>
+      <span class="chapter-part" id="chapter-part">12.11.2021 — 12.11.2025</span>
+    </div>
+
+    <div class="book-stage">
+      <button class="edge-button previous" id="edge-prev" type="button" aria-label="Trang trước">‹</button>
+      <div class="book-frame" id="book-frame">
+        <div class="book" id="book" aria-label="Trang album đang mở"></div>
+      </div>
+      <button class="edge-button next" id="edge-next" type="button" aria-label="Trang tiếp theo">›</button>
+    </div>
+
+    <!-- Controls at bottom -->
+    <div class="reader-controls">
+      <button class="turn-button" id="prev-page" type="button" aria-label="Trang trước">
+        <span aria-hidden="true">←</span> <span>Trang trước</span>
+      </button>
+      <div class="page-position">
+        <button type="button" id="page-indicator" aria-label="Mở mục lục album">Bìa album</button>
+        <div class="page-track" aria-hidden="true"><span id="page-progress"></span></div>
+        <span class="gesture-hint">Dùng phím ← → hoặc vuốt để lật trang</span>
+      </div>
+      <button class="turn-button" id="next-page" type="button" aria-label="Trang tiếp">
+        <span>Trang tiếp</span> <span aria-hidden="true">→</span>
+      </button>
+    </div>
+  </main>
+
+  <footer class="reader-footer">
+    <span>15 khoảnh khắc · 4 năm thương mến</span>
+    <span>Dành riêng cho Boss của anh ❤️</span>
+  </footer>
+
+  <!-- Dialog: Table of contents -->
+  <dialog class="contents-dialog" id="contents-dialog" aria-labelledby="contents-title">
+    <div class="dialog-header">
+      <div>
+        <span class="overline">HÀNH TRÌNH 4 NĂM BÊN NHAU</span>
+        <h2 id="contents-title">Từng trang kỷ niệm</h2>
+      </div>
+      <button class="round-button" id="close-contents" type="button" aria-label="Đóng mục lục">×</button>
+    </div>
+    <nav class="contents-list" id="contents-list" aria-label="Các chương của album"></nav>
+  </dialog>
+
+  <!-- Dialog: Lightbox to view full photo -->
+  <dialog class="lightbox" id="lightbox" aria-label="Xem ảnh lớn">
+    <div class="lightbox-top">
+      <span id="photo-count" aria-live="polite"></span>
+      <button class="round-button" id="close-photo" type="button" aria-label="Đóng ảnh">×</button>
+    </div>
+    <div class="lightbox-stage">
+      <button class="round-button lightbox-prev" id="prev-photo" type="button" aria-label="Ảnh trước">←</button>
+      <img id="lightbox-image" alt="">
+      <button class="round-button lightbox-next" id="next-photo" type="button" aria-label="Ảnh tiếp theo">→</button>
+    </div>
+    <p id="photo-caption" aria-live="polite"></p>
+  </dialog>
+
+  <!-- Letter template (Anniversary Letter) -->
+  <template id="letter-template">
+    <article class="letter-content" id="letter-content" hidden>
+      <div class="letter-date">12 tháng 11 · Kỷ niệm 4 năm tình yêu</div>
+      <h3 tabindex="-1" id="letter-greeting">Gửi Boss của anh,</h3>
+      <p>Hôm nay là ngày 12 tháng 11 — tròn 4 năm kể từ ngày anh có được may mắn lớn nhất cuộc đời: được ở bên cạnh em.</p>
+      <p>4 năm, hơn 1.460 ngày trôi qua, từ những ngày đầu bỡ ngỡ cho đến hôm nay, em đã trở thành điều quen thuộc, bình yên và quan trọng nhất trong cuộc sống của anh. Mỗi ngày được nhìn thấy em cười, được cùng em đi qua từng góc phố, lại là một ngày anh thấy yêu em nhiều hơn một chút.</p>
+      <p>Nhìn lại những tấm ảnh hai đứa mình cùng gom góp...</p>
+      <p>Anh nhớ chuyến đi biển ngập tràn nắng gió, nhớ lúc em đứng giữa làn sóng trắng với nụ cười rạng rỡ làm tim anh xao xuyến, nhớ buổi chiều ngắm hoàng hôn buông xuống vịnh mà mắt anh chỉ mải dõi theo em.</p>
+      <p>Anh nhớ cả lúc em nhí nhố ngồi bệt trên cỏ xanh, rồi cười tít mắt lái chiếc xe điện đồ chơi như một em bé ba tuổi. Nhớ những buổi hẹn hò giản dị ở rạp phim, nhớ lần cùng nhau ngồi xoay bàn gốm nặn từng chút đất, hay những bữa tối ấm áp cùng nhau thổi nến kỷ niệm...</p>
+      <p>Dù ngoài kia em có là cô gái mạnh mẽ hay là 'Boss' quyền lực đến đâu, thì khi về bên anh, em sẽ mãi là cô gái nhỏ được yêu thương, chiều chuộng và chở che vô điều kiện.</p>
+      <p>Cảm ơn em vì 4 năm qua đã luôn kiên nhẫn, thấu hiểu và cùng anh vượt qua những nốt thăng trầm của tuổi trẻ. Nụ cười của em luôn là nguồn năng lượng xua tan mọi mỏi mệt trong anh.</p>
+      <p>4 năm đầu tiên thật đẹp, và anh tin hành trình phía trước của chúng mình sẽ còn rực rỡ hơn nữa. Mong cho Boss của anh luôn khỏe mạnh, luôn vui vẻ, rạng ngời và mãi hạnh phúc bên anh nhé.</p>
+      <p class="letter-wish">Chúc mừng kỷ niệm 4 năm tình yêu của chúng mình! ❤️<br>Mãi là bến đỗ bình yên của nhau, em nhé.</p>
+      <p class="letter-signature">Yêu và thương Boss thật nhiều,<br><em>Anh của em</em></p>
+      <div class="letter-actions">
+        <button class="text-button" id="save-letter" type="button">Tải lá thư về máy ↓</button>
+        <button class="text-button" id="close-letter" type="button">Gấp thư lại ↑</button>
+      </div>
+    </article>
+  </template>
+
+  <p class="sr-only" id="page-announcement" aria-live="polite"></p>
+  <p class="audio-status sr-only" aria-live="polite"></p>
+</body>
+</html>
+
