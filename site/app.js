@@ -2,114 +2,23 @@
   'use strict';
 
   const $ = selector => document.querySelector(selector);
+  const $$ = selector => document.querySelectorAll(selector);
+
+  const albumData = window.BOSS_ALBUM_DATA || {};
   const photos = window.BOSS_PHOTOS || [];
-  const byId = new Map(photos.map((p, i) => [p.id, { ...p, number: i + 1 }]));
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const byId = new Map(photos.map(p => [String(p.id), p]));
+
   const book = $('#book');
   const frame = $('#book-frame');
-  const effects = window.BossEffects.create({ bookFrame: frame });
   const lightbox = $('#lightbox');
   const contents = $('#contents-dialog');
-  const letterSource = $('#letter-template').content.querySelector('article');
-  const paragraphs = [...letterSource.querySelectorAll(':scope > p')];
-
-  const captions = {
-    '1': 'Chỉ cần nhìn vào đôi mắt này, mọi muộn phiền ngoài kia đều biến mất.',
-    '2': 'Đi đâu không quan trọng, quan trọng là luôn có Boss kề bên.',
-    '3': 'Hoàng hôn hôm ấy rất đẹp, nhưng mắt anh chỉ mải ngắm em.',
-    '4': 'Em như cơn sóng nhỏ, vừa mát lành vừa làm xao xuyến cả mùa hè.',
-    '5': 'Lúc nào cũng rạng rỡ và ngập tràn năng lượng thế này nhé!',
-    '6': 'Bình yên đôi khi chỉ là ngồi ngắm em cười vu vơ.',
-    '7': 'Ra ngoài là Boss quyền lực, về cạnh anh là "tay đua nhí" đáng yêu.',
-    '8': 'Nắng sớm, hoa hồng, và người xinh đẹp nhất trong mắt anh.',
-    '9': 'Giữa biển trời bao la, tìm được nhau là điều may mắn nhất đời anh.',
-    '10': 'Nàng thơ của anh giữa vịnh biển kỳ vĩ.',
-    '11': 'Nụ cười thả ga, đắm mình trọn vẹn trong làn nước xanh mát.',
-    '12': 'Một buổi hẹn hò xem phim, ly bắp rang và nụ cười quen thuộc.',
-    '13': '12.11 — 4 năm cùng nhau đi qua bao thăng trầm, cảm ơn Boss vì luôn ở đây.',
-    '14': 'Nặn gốm thì cần kiên nhẫn, còn yêu em thì anh chưa từng thấy đủ.',
-    '15': 'Tác phẩm có thể chưa hoàn hảo, nhưng khoảnh khắc bên em thì luôn là tuyệt nhất.'
-  };
-
-  const chapters = [
-    {
-      name: 'Chạm mắt là thấy bình yên',
-      subtitle: 'Người khiến cả thế giới của anh dịu lại.',
-      quote: 'Ánh mắt em là nơi bình yên nhất anh từng biết.',
-      ids: ['1', '8']
-    },
-    {
-      name: 'Vitamin Sea cùng Boss',
-      subtitle: 'Biển xanh, nắng vàng và những nụ cười tỏa nắng.',
-      quote: 'Cùng em đi đến tận cùng chân trời góc biển.',
-      ids: ['2', '3', '4', '9', '10', '11']
-    },
-    {
-      name: 'Em bé ba tuổi của anh',
-      subtitle: 'Những phút giây tinh nghịch và hồn nhiên nhất.',
-      quote: 'Ở bên anh, em cứ việc làm em bé vô tư.',
-      ids: ['5', '6', '7']
-    },
-    {
-      name: 'Gom nhặt những buổi hẹn hò',
-      subtitle: 'Rạp phim quen, bàn gốm nhỏ và những chiều bên nhau.',
-      quote: 'Hạnh phúc đong đầy từ những điều thật giản đơn.',
-      ids: ['12', '14', '15']
-    },
-    {
-      name: '4 Năm một chặng đường',
-      subtitle: '12.11 · Một cột mốc đặc biệt của hai đứa mình.',
-      text: 'Bốn năm không quá dài, nhưng đủ để hai đứa mình cùng trưởng thành, thấu hiểu và trở thành một phần không thể thiếu của nhau. Cảm ơn Boss vì đã luôn đồng hành cùng anh.',
-      quote: '12.11.2021 — 12.11.2025 · 4 năm thương yêu.',
-      ids: ['13']
-    },
-    {
-      name: 'Gửi Boss của những năm tháng sau',
-      subtitle: 'Lá thư từ tận đáy lòng anh dành cho em.',
-      quote: 'Con đường phía trước, anh vẫn luôn ở đây nắm chặt tay em.',
-      letter: true
-    }
-  ];
-
-  // Build page sequence
-  const pages = [{ kind: 'cover', chapter: -1 }];
-
-  chapters.forEach((chapter, index) => {
-    chapter.start = pages.length;
-    if (chapter.letter) {
-      for (let part = 0; part < 2; part++) {
-        pages.push({ kind: 'letter', chapter: index, part });
-      }
-      chapter.parts = 2;
-      return;
-    }
-
-    const list = chapter.ids;
-    const groups = [];
-    if (list.length === 1) {
-      groups.push(list);
-    } else if (list.length <= 2) {
-      groups.push(list);
-    } else if (list.length === 3) {
-      groups.push(list);
-    } else if (list.length === 6) {
-      groups.push(list.slice(0, 2), list.slice(2, 4), list.slice(4, 6));
-    } else {
-      for (let i = 0; i < list.length; i += 3) {
-        groups.push(list.slice(i, i + 3));
-      }
-    }
-
-    chapter.parts = groups.length;
-    groups.forEach((ids, part) => pages.push({ kind: 'photos', chapter: index, ids, part }));
-  });
-
-  const pad = n => String(n).padStart(2, '0');
+  const effects = window.BossEffects ? window.BossEffects.create({ bookFrame: frame }) : { decorate() {}, onPage() {}, burst() {} };
+  const loveMusic = window.BossMusic.createPlayer();
 
   function element(tag, className, text) {
     const el = document.createElement(tag);
     if (className) el.className = className;
-    if (text !== undefined) el.textContent = text;
+    if (text !== undefined && text !== null) el.textContent = text;
     return el;
   }
 
@@ -117,223 +26,448 @@
     return element('section', 'paper ' + side);
   }
 
-  function pageHead(chapter, page, full = false) {
-    const head = element('header', 'page-header');
-    head.append(
-      element('span', 'overline', page.letter ? 'LÁ THƯ TÌNH YÊU' : 'CHƯƠNG ' + pad(page.chapter + 1))
-    );
-    if (full) head.append(element('h2', '', chapter.name));
-    else head.append(element('p', 'page-small-note', chapter.quote));
-    return head;
+  const pad = n => String(n).padStart(2, '0');
+
+  // Build 24 spreads
+  const spreads = [];
+
+  // Spread 0 -> Trang 01 (Cover spread)
+  spreads.push({
+    kind: 'cover',
+    pageNum: 1,
+    chapter: 0,
+    title: albumData.coverSpread?.title || '4 năm. 48 tháng. 1461 ngày.',
+    subtitle: 'Bìa mở đầu album kỷ niệm 12.11',
+    data: albumData.coverSpread
+  });
+
+  // Spread 1..21 -> Trang 02..22 (Moments)
+  if (albumData.pages) {
+    albumData.pages.forEach(p => {
+      spreads.push({
+        kind: 'moment',
+        pageNum: p.pageNum,
+        chapter: p.chapter,
+        title: p.title,
+        subtitle: p.tag || `Khoảnh khắc ${p.pageNum}`,
+        moment: p
+      });
+    });
   }
 
-  function photoFigure(id) {
-    const photo = byId.get(id);
-    const figure = element('figure', 'photo-print');
-    figure.style.setProperty('--ar', (photo.width / photo.height).toFixed(4));
-    if (photo.width > photo.height) figure.classList.add('landscape');
+  // Spread 22 -> Trang 23 (Thư phần 1)
+  spreads.push({
+    kind: 'letter',
+    pageNum: 23,
+    chapter: 6,
+    part: 0,
+    title: albumData.letterPages?.['23']?.title || 'Bốn năm bên em, ngàn điều tuyệt vời.',
+    subtitle: 'Lá thư tình của anh (Phần 1)',
+    letter: albumData.letterPages?.['23']
+  });
 
-    const button = element('button', 'photo-trigger');
-    button.type = 'button';
-    button.dataset.photo = id;
-    button.setAttribute('aria-label', 'Xem ảnh lớn: ' + (captions[id] || photo.label));
+  // Spread 23 -> Trang 24 (Thư phần 2)
+  spreads.push({
+    kind: 'letter',
+    pageNum: 24,
+    chapter: 6,
+    part: 1,
+    title: albumData.letterPages?.['24']?.title || 'Mãi là bến đỗ bình yên của nhau nhé.',
+    subtitle: 'Lá thư tình của anh (Phần 2)',
+    letter: albumData.letterPages?.['24']
+  });
 
-    const windowEl = element('span', 'photo-window');
-    const img = element('img');
-    img.src = photo.src;
-    img.alt = captions[id] || photo.label;
-    img.width = photo.width;
-    img.height = photo.height;
-    img.draggable = false;
-    windowEl.append(img);
-    button.append(windowEl);
+  const getChapterName = (chIdx) => {
+    if (chIdx === 0) return 'Trang mở đầu';
+    if (chIdx === 6) return 'Lá thư tình';
+    const ch = albumData.chapters?.find(c => c.index === chIdx);
+    return ch ? ch.title.split('—')[0].trim() : `Phần ${chIdx}`;
+  };
 
-    const caption = element('figcaption');
-    caption.append(
-      element('span', '', captions[id] || photo.label),
-      element('small', '', pad(photo.number))
-    );
-    figure.append(button, caption);
-    return figure;
-  }
-
-  function photoGrid(ids) {
-    const grid = element('div', 'photo-grid ' + (ids.length === 2 ? 'two' : 'single'));
-    ids.forEach(id => grid.append(photoFigure(id)));
-    return grid;
-  }
-
-  function pageFoot(page, side) {
-    const footer = element('div', 'paper-footer');
-    footer.append(
-      element('span', '', 'MY BOSS · 4 NĂM YÊU THƯƠNG'),
-      element('span', '', pad(pages.indexOf(page) * 2 + (side === 'right' ? 0 : -1)))
-    );
-    return footer;
-  }
-
-  function coverSpread() {
+  // Render Spread 0 (Cover Spread)
+  function renderCoverSpread(s) {
+    const cs = s.data || {};
     const spread = element('div', 'spread cover-spread');
     spread.dataset.kind = 'cover';
 
     const left = paper('left');
     const content = element('div', 'cover-copy');
     content.append(
-      element('span', 'overline', 'KỶ NIỆM TÌNH YÊU · 12.11'),
-      element('p', 'full-name', 'DÀNH TẶNG BOSS CỦA ANH')
+      element('span', 'overline', cs.overline || 'KỶ NIỆM TÌNH YÊU · 12.11'),
+      element('p', 'full-name', cs.sub_overline || 'DÀNH TẶNG BOSS CỦA ANH')
     );
 
     const title = element('h1');
-    title.append(
-      document.createTextNode('Bốn năm '),
-      element('em', '', 'bên em'),
-      document.createTextNode(', ngàn điều thương nhớ.')
-    );
+    if (cs.title) {
+      if (cs.title.includes('<')) {
+        title.innerHTML = cs.title;
+      } else {
+        title.textContent = cs.title;
+      }
+    } else {
+      title.append(
+        document.createTextNode('Bốn năm '),
+        element('em', '', 'bên em'),
+        document.createTextNode(', ngàn điều thương nhớ.')
+      );
+    }
     content.append(
       title,
-      element('p', 'cover-sub', '1.460 ngày cùng nhau gom góp kỷ niệm.\nMón quà nhỏ anh tự tay viết tặng Boss.')
+      element('p', 'cover-sub', cs.lead || '1.460 ngày cùng nhau gom góp kỷ niệm.\nMón quà nhỏ anh tự tay chuẩn bị tặng Boss.')
     );
 
-    const start = element('button', 'primary-button', 'Mở những trang đầu  ↗');
-    start.type = 'button';
-    start.dataset.goto = '1';
-    content.append(start, element('span', 'cover-date', '12.11.2021 — 12.11.2025'));
+    const startBtn = element('button', 'primary-button', 'Mở những trang đầu ↗');
+    startBtn.type = 'button';
+    startBtn.dataset.goto = '1';
+    content.append(startBtn, element('span', 'cover-date', cs.date || '12.11.2022 — 12.11.2026'));
     left.append(content);
 
     const right = paper('right');
     const figure = element('figure', 'cover-portrait');
     const image = element('img');
-    image.src = byId.get('1').src;
-    image.alt = 'Chân dung Boss của anh';
+    image.src = cs.src || 'photos/1.jpg';
+    image.alt = cs.moment_title || 'Chân dung Boss của anh';
     image.draggable = false;
-    figure.append(image, element('figcaption', '', 'Nụ cười làm tim anh tan chảy mỗi ngày.'));
-    right.append(figure, element('span', 'cover-seal', 'with love, từ Anh'));
+
+    const figcap = element('figcaption');
+    figcap.append(
+      element('strong', '', cs.moment_title || 'Chạm mắt là thấy bình yên'),
+      element('span', '', cs.text || 'Chỉ cần nhìn vào đôi mắt này, mọi muộn phiền ngoài kia đều biến mất.')
+    );
+
+    figure.append(image, figcap);
+    right.append(figure, element('span', 'cover-seal', cs.seal || 'with love, từ Anh'));
+
     spread.append(left, right);
     return spread;
   }
 
-  const letterParts = [
-    { title: 'Bốn năm bên em, ngàn điều tuyệt vời.', left: [0, 1, 2], right: [3] },
-    { title: 'Mãi là bến đỗ bình yên của nhau nhé.', left: [4, 5, 6], right: [7, 8] }
-  ];
+  // Render Moment Spread (Trang 02 to Trang 22)
+  function renderMomentSpread(s) {
+    const m = s.moment;
+    const spread = element('div', 'spread moment-spread');
+    spread.dataset.kind = 'moment';
+    spread.dataset.chapter = s.chapter;
 
-  function letterSpread(page) {
-    const part = letterParts[page.part];
-    const spread = element('div', 'spread letter-spread letter-part-' + page.part);
-    spread.dataset.kind = 'letter';
-
+    // Left Paper: Story
     const left = paper('left');
     const head = element('header', 'page-header');
-    head.append(element('span', 'overline', '12 THÁNG 11 · THƯ TÌNH CỦA ANH'), element('h2', '', part.title));
+    
+    const chInfo = albumData.chapters?.find(c => c.index === s.chapter);
+    const chTitle = chInfo ? chInfo.title.split('—')[0].trim() : '';
+    if (chTitle) {
+      head.append(element('span', 'overline', chTitle));
+    }
+
+    if (m.tag) {
+      head.append(element('span', 'location-badge', '📍 ' + m.tag));
+    }
+    head.append(element('h2', 'moment-title', m.title));
     left.append(head);
 
-    const body = element('div', 'letter-body');
-    if (page.part === 0) body.append(element('p', 'salutation', 'Gửi Boss của anh,'));
-    part.left.forEach(i => {
-      if (paragraphs[i]) body.append(paragraphs[i].cloneNode(true));
-    });
-    left.append(body, pageFoot(page, 'left'));
+    const storyBody = element('div', 'story-body');
+    storyBody.append(element('p', 'story-text', m.text));
 
-    const right = paper('right');
-    const rest = element('div', 'letter-body');
-    part.right.forEach(i => {
-      if (paragraphs[i]) rest.append(paragraphs[i].cloneNode(true));
-    });
-
-    if (page.part === 0) {
-      rest.append(element('p', 'letter-turn', 'Còn tiếp ở trang sau →'));
-    } else {
-      const save = element('button', 'text-button', 'Tải lá thư về máy ↓');
-      save.type = 'button';
-      save.dataset.saveLetter = 'true';
-      const restart = element('button', 'text-button', 'Về lại bìa album ↗');
-      restart.type = 'button';
-      restart.dataset.goto = '0';
-      const actions = element('div', 'closing-actions');
-      actions.append(save, restart);
-      rest.append(actions);
-    }
-    right.append(rest, pageFoot(page, 'right'));
-    spread.append(left, right);
-    return spread;
-  }
-
-  function makeSpread(page) {
-    if (page.kind === 'cover') return coverSpread();
-    if (page.kind === 'letter') return letterSpread(page);
-
-    const chapter = chapters[page.chapter];
-    const spread = element('div', 'spread photo-spread count-' + page.ids.length);
-    spread.dataset.kind = 'photos';
-    spread.dataset.chapter = page.chapter;
-
-    const left = paper('left'), right = paper('right');
-    left.append(pageHead(chapter, page, true));
-
-    if (page.ids.length === 1) {
-      left.append(photoGrid(page.ids), pageFoot(page, 'left'));
-      const note = element('div', 'story-note');
-      note.append(
-        element('span', 'story-symbol', '🌿'),
-        element('span', 'overline', '12.11 · 4 NĂM MỘT CHẶNG ĐƯỜNG'),
-        element('h3', '', chapter.subtitle),
-        element('p', '', chapter.text),
-        element('span', 'little-signature', chapter.quote)
+    if (chInfo?.quote) {
+      const quoteEl = element('div', 'story-ornament');
+      quoteEl.append(
+        element('span', 'ornament-leaf', '🌿'),
+        element('em', '', `"${chInfo.quote}"`)
       );
-      right.append(note);
-    } else if (page.ids.length === 2) {
-      left.append(photoGrid([page.ids[0]]), pageFoot(page, 'left'));
-      right.append(pageHead(chapter, page, false), photoGrid([page.ids[1]]));
-    } else {
-      // 3 photos: 2 on left, 1 on right
-      left.append(photoGrid(page.ids.slice(0, 2)), pageFoot(page, 'left'));
-      right.append(pageHead(chapter, page, false), photoGrid(page.ids.slice(2)));
+      storyBody.append(quoteEl);
+    }
+    left.append(storyBody);
+
+    const footLeft = element('div', 'paper-footer');
+    footLeft.append(
+      element('span', '', 'MY BOSS · 4 NĂM YÊU THƯƠNG'),
+      element('span', '', `TRANG ${pad(s.pageNum)} / ${spreads.length}`)
+    );
+    left.append(footLeft);
+
+    // Right Paper: Photo or Video
+    const right = paper('right');
+    const figure = element('figure', 'photo-print' + (m.type === 'video' ? ' video-print' : ''));
+
+    if (m.type === 'photo') {
+      const trigger = element('button', 'photo-trigger');
+      trigger.type = 'button';
+      trigger.dataset.photo = String(s.pageNum);
+      trigger.setAttribute('aria-label', `Xem ảnh lớn: ${m.title}`);
+
+      const win = element('span', 'photo-window');
+      const img = element('img');
+      img.src = m.src;
+      img.alt = m.title;
+      img.draggable = false;
+      win.append(img);
+      trigger.append(win);
+      figure.append(trigger);
+
+      const cap = element('figcaption');
+      cap.append(
+        element('span', 'caption-title', m.title),
+        element('small', 'caption-num', `${pad(s.pageNum)} / ${spreads.length}`)
+      );
+      figure.append(cap);
+    } else if (m.type === 'video') {
+      const win = element('div', 'video-window');
+      const video = element('video');
+      video.src = m.videoSrc;
+      video.poster = m.poster || m.src;
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      win.append(video);
+      figure.append(win);
+
+      const cap = element('figcaption');
+      cap.append(
+        element('span', 'caption-title', m.title),
+        element('span', 'video-badge', '▶ VIDEO KỶ NIỆM')
+      );
+      figure.append(cap);
     }
 
-    right.append(pageFoot(page, 'right'));
+    right.append(figure);
+
+    const footRight = element('div', 'paper-footer');
+    footRight.append(
+      element('span', '', chInfo ? chInfo.subtitle : '12.11.2022 — 12.11.2026'),
+      element('span', '', pad(s.pageNum))
+    );
+    right.append(footRight);
+
     spread.append(left, right);
     return spread;
   }
 
-  let current = 0, turning = false, animation = null, bookClosed = false, opening = null;
-  let currentPhoto = 0, lastPhotoId = null;
+  // Render Letter Spreads (Trang 23 & 24)
+  function renderLetterSpread(s) {
+    const l = s.letter || {};
+    const spread = element('div', `spread letter-spread letter-part-${s.part}`);
+    spread.dataset.kind = 'letter';
+    spread.dataset.chapter = 6;
+
+    if (s.part === 0) {
+      // Trang 23
+      const left = paper('left');
+      const head = element('header', 'page-header');
+      head.append(
+        element('span', 'overline', '12 THÁNG 11 · THƯ TÌNH CỦA ANH'),
+        element('h2', '', l.title || 'Bốn năm bên em, ngàn điều tuyệt vời.')
+      );
+      left.append(head);
+
+      const body = element('div', 'letter-body');
+      if (l.greeting) body.append(element('p', 'salutation', l.greeting));
+      if (l.paragraphs) {
+        l.paragraphs.slice(0, 3).forEach(p => body.append(element('p', '', p)));
+      }
+      left.append(body);
+
+      const footLeft = element('div', 'paper-footer');
+      footLeft.append(element('span', '', 'LÁ THƯ TÌNH · PHẦN 1'), element('span', '', 'TRANG 23 / 24'));
+      left.append(footLeft);
+
+      const right = paper('right');
+      const rightBody = element('div', 'letter-body');
+      if (l.paragraphs && l.paragraphs[3]) {
+        rightBody.append(element('p', '', l.paragraphs[3]));
+      }
+
+      const fig = element('figure', 'letter-snapshot');
+      const img = element('img');
+      img.src = 'photos/7.jpg';
+      img.alt = 'Chuyến đi biển kỷ niệm';
+      fig.append(img, element('figcaption', '', 'Vịnh Lan Hạ · Khoảnh khắc nụ cười của hai đứa mình.'));
+      rightBody.append(fig);
+
+      rightBody.append(element('p', 'letter-turn', 'Còn tiếp ở trang sau →'));
+      right.append(rightBody);
+
+      const footRight = element('div', 'paper-footer');
+      footRight.append(element('span', '', '12.11.2022 — 12.11.2026'), element('span', '', '23'));
+      right.append(footRight);
+
+      spread.append(left, right);
+    } else {
+      // Trang 24
+      const left = paper('left');
+      const head = element('header', 'page-header');
+      head.append(
+        element('span', 'overline', '12 THÁNG 11 · THƯ TÌNH CỦA ANH'),
+        element('h2', '', l.title || 'Mãi là bến đỗ bình yên của nhau nhé.')
+      );
+      left.append(head);
+
+      const body = element('div', 'letter-body');
+      if (l.paragraphs) {
+        l.paragraphs.slice(0, 3).forEach(p => body.append(element('p', '', p)));
+      }
+      left.append(body);
+
+      const footLeft = element('div', 'paper-footer');
+      footLeft.append(element('span', '', 'LÁ THƯ TÌNH · PHẦN 2'), element('span', '', 'TRANG 24 / 24'));
+      left.append(footLeft);
+
+      const right = paper('right');
+      const rightBody = element('div', 'letter-body');
+      if (l.paragraphs && l.paragraphs[3]) {
+        rightBody.append(element('p', '', l.paragraphs[3]));
+      }
+      if (l.wish) {
+        const wishEl = element('p', 'letter-wish');
+        wishEl.innerHTML = l.wish.replace(/\n/g, '<br>');
+        rightBody.append(wishEl);
+      }
+      if (l.signature) {
+        const sigEl = element('p', 'letter-signature');
+        const lines = l.signature.split('\n').map(s => s.trim()).filter(Boolean);
+        if (lines.length > 1) {
+          sigEl.innerHTML = lines[0] + '<br><em>' + lines.slice(1).join('<br>') + '</em>';
+        } else {
+          sigEl.innerHTML = '<em>' + l.signature + '</em>';
+        }
+        rightBody.append(sigEl);
+      }
+
+      const actions = element('div', 'closing-actions');
+      const saveBtn = element('button', 'text-button', 'Tải lá thư về máy ↓');
+      saveBtn.type = 'button';
+      saveBtn.dataset.saveLetter = 'true';
+
+      const restartBtn = element('button', 'text-button', 'Về lại bìa album ↗');
+      restartBtn.type = 'button';
+      restartBtn.dataset.goto = '0';
+
+      actions.append(saveBtn, restartBtn);
+      rightBody.append(actions);
+      right.append(rightBody);
+
+      const footRight = element('div', 'paper-footer');
+      footRight.append(element('span', '', 'MY BOSS · MÃI MÃI THƯƠNG YÊU ❤️'), element('span', '', '24'));
+      right.append(footRight);
+
+      spread.append(left, right);
+    }
+
+    return spread;
+  }
+
+  function makeSpread(spreadIndex) {
+    const s = spreads[spreadIndex];
+    if (!s) return element('div', 'spread');
+    if (s.kind === 'cover') return renderCoverSpread(s);
+    if (s.kind === 'letter') return renderLetterSpread(s);
+    return renderMomentSpread(s);
+  }
+
+  let current = 0;
+  let turning = false;
+  let animation = null;
+  let bookClosed = false;
+  let opening = null;
 
   function hashPage() {
     const key = location.hash.slice(1);
     const n = /^trang-(\d+)$/.exec(key);
-    return n ? Math.max(0, Math.min(pages.length - 1, Number(n[1]) - 1)) : 0;
+    return n ? Math.max(0, Math.min(spreads.length - 1, Number(n[1]) - 1)) : 0;
   }
 
   function updateChrome() {
-    const page = pages[current], chapter = chapters[page.chapter];
-    $('#chapter-overline').textContent = page.kind === 'cover' ? 'KỶ NIỆM 4 NĂM YÊU NHAU' : page.kind === 'letter' ? 'LÁ THƯ TÌNH YÊU' : 'CHƯƠNG ' + pad(page.chapter + 1);
-    $('#chapter-title').textContent = chapter ? chapter.subtitle : '4 năm bên em, ngàn điều tuyệt vời.';
-    $('#chapter-part').textContent = chapter ? `Phần ${page.part + 1} / ${chapter.parts}` : '12.11.2021 — 12.11.2025';
-    $('#page-indicator').textContent = current === 0 ? `Bìa album · 01 / ${pages.length}` : `Trang ${pad(current + 1)} / ${pages.length}`;
-    $('#page-progress').style.width = (current / (pages.length - 1) * 100) + '%';
+    const s = spreads[current];
+    if (!s) return;
+
+    if (s.kind === 'cover') {
+      $('#chapter-overline').textContent = 'KỶ NIỆM 4 NĂM YÊU NHAU · 12.11';
+      $('#chapter-title').textContent = s.title || '4 năm. 48 tháng. 1461 ngày.';
+      $('#chapter-part').textContent = '12.11.2022 — 12.11.2026';
+    } else if (s.kind === 'letter') {
+      $('#chapter-overline').textContent = 'LÁ THƯ TÌNH CỦA ANH';
+      $('#chapter-title').textContent = s.title;
+      $('#chapter-part').textContent = `Trang ${s.pageNum} / 24`;
+    } else {
+      const chInfo = albumData.chapters?.find(c => c.index === s.chapter);
+      $('#chapter-overline').textContent = chInfo ? chInfo.title.split('—')[0].trim() : getChapterName(s.chapter);
+      $('#chapter-title').textContent = s.title;
+      $('#chapter-part').textContent = `Trang ${pad(s.pageNum)} / ${spreads.length}`;
+    }
+
+    const indicatorText = current === 0 ? `Bìa mở đầu · 01 / ${spreads.length}` : `Trang ${pad(current + 1)} / ${spreads.length}`;
+    $('#page-indicator').textContent = indicatorText;
+    $('#page-progress').style.width = ((current / (spreads.length - 1)) * 100) + '%';
+    
     $('#prev-page').disabled = $('#edge-prev').disabled = current === 0 || turning;
-    $('#next-page').disabled = $('#edge-next').disabled = current === pages.length - 1 || turning;
-    document.querySelectorAll('[data-chapter-target]').forEach(b => {
-      if (Number(b.dataset.chapterTarget) === page.chapter) b.setAttribute('aria-current', 'page');
-      else b.removeAttribute('aria-current');
+    $('#next-page').disabled = $('#edge-next').disabled = current === spreads.length - 1 || turning;
+
+    $$('[data-chapter-target]').forEach(btn => {
+      if (Number(btn.dataset.chapterTarget) === s.chapter) {
+        btn.setAttribute('aria-current', 'page');
+      } else {
+        btn.removeAttribute('aria-current');
+      }
     });
-    $('#page-announcement').textContent = `${current === 0 ? 'Bìa album' : chapter.name}. Trang ${current + 1} trên ${pages.length}.`;
+
+    $('#page-announcement').textContent = `${s.title}. Trang ${current + 1} trên ${spreads.length}.`;
   }
 
+  function bindSpreadVideos(container) {
+    container.querySelectorAll('video').forEach(video => {
+      video.addEventListener('play', () => {
+        document.querySelectorAll('video').forEach(v => {
+          if (v !== video) v.pause();
+        });
+        loveMusic.duck();
+      });
+      video.addEventListener('pause', () => {
+        const anyPlaying = Array.from(document.querySelectorAll('video')).some(v => !v.paused && !v.ended);
+        if (!anyPlaying) loveMusic.unduck();
+      });
+      video.addEventListener('ended', () => {
+        loveMusic.unduck();
+      });
+    });
+  }
+
+  // Mount content into #book without transition
+  function mountSpread(index) {
+    current = index;
+    const spread = makeSpread(current);
+    effects.decorate(spread, spreads[current]);
+    bindSpreadVideos(spread);
+    spread.dataset.pageIndex = current;
+    book.replaceChildren(spread);
+    updateChrome();
+    effects.onPage(spreads[current]);
+  }
+
+  // 3D Page flip transition
   async function showPage(index, animate = true) {
     if (bookClosed) {
-      openBook().then(() => { if (index > 1) showPage(index); });
-      return;
+      await openBook();
+      if (index === current) return;
     }
-    if (turning || index < 0 || index >= pages.length || (index === current && book.children.length)) return;
+    if (turning || index < 0 || index >= spreads.length) return;
+    if (index === current && book.children.length) return;
+
+    book.querySelectorAll('video').forEach(v => {
+      try { v.pause(); } catch {}
+    });
+    loveMusic.unduck();
+
+    if (animate) {
+      loveMusic.flipSound();
+    }
 
     const previous = book.firstElementChild;
     const forward = index > current;
-    turning = Boolean(previous && animate && !reduced.matches);
+    turning = Boolean(previous && animate);
     current = index;
 
-    const next = makeSpread(pages[current]);
-    effects.decorate(next, pages[current]);
+    const next = makeSpread(current);
+    effects.decorate(next, spreads[current]);
+    bindSpreadVideos(next);
     next.dataset.pageIndex = current;
     book.replaceChildren(next);
     updateChrome();
@@ -344,9 +478,12 @@
       const layer = element('div', 'turn-layer');
       layer.setAttribute('aria-hidden', 'true');
       frame.append(layer);
+
       try {
-        const ease = 'cubic-bezier(.35,.1,.25,1)';
-        if (matchMedia('(max-width:760px)').matches) {
+        const ease = 'cubic-bezier(.32, .08, .22, 1)';
+        const isMobile = matchMedia('(max-width: 760px)').matches;
+
+        if (isMobile) {
           const d = 750;
           const leaf = element('div', 'm-leaf');
           const front = element('div', 'm-face m-front');
@@ -359,24 +496,34 @@
             front.append(previous.cloneNode(true), shade);
             leaf.append(front, back);
             layer.append(cast, leaf);
-            animation = leaf.animate([{ transform: 'perspective(1800px) rotateY(0deg)' }, { transform: 'perspective(1800px) rotateY(-180deg)' }], { duration: d, easing: ease, fill: 'forwards' });
-            cast.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
-            shade.animate([{ opacity: 0 }, { opacity: 1 }], { duration: d / 2, fill: 'forwards' });
+            animation = leaf.animate(
+              [{ transform: 'perspective(1800px) rotateY(0deg)' }, { transform: 'perspective(1800px) rotateY(-180deg)' }],
+              { duration: d, easing: ease, fill: 'forwards' }
+            );
+            cast.animate([{ opacity: 0.8 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
+            shade.animate([{ opacity: 0 }, { opacity: 0.8 }], { duration: d / 2, fill: 'forwards' });
           } else {
             const still = element('div', 'm-static');
             still.append(previous.cloneNode(true));
             front.append(next.cloneNode(true), shade);
             leaf.append(front, back);
             layer.append(still, cast, leaf);
-            animation = leaf.animate([{ transform: 'perspective(1800px) rotateY(-180deg)' }, { transform: 'perspective(1800px) rotateY(0deg)' }], { duration: d, easing: ease, fill: 'forwards' });
-            cast.animate([{ opacity: 0 }, { opacity: 1 }], { duration: d, fill: 'forwards' });
-            shade.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
+            animation = leaf.animate(
+              [{ transform: 'perspective(1800px) rotateY(-180deg)' }, { transform: 'perspective(1800px) rotateY(0deg)' }],
+              { duration: d, easing: ease, fill: 'forwards' }
+            );
+            cast.animate([{ opacity: 0 }, { opacity: 0.8 }], { duration: d, fill: 'forwards' });
+            shade.animate([{ opacity: 0.8 }, { opacity: 0.8, offset: .5 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
           }
         } else {
+          // Desktop 3D Spread page flip
           const d = 820;
-          const fixed = previous.querySelector(forward ? '.paper.left' : '.paper.right').cloneNode(true);
-          fixed.classList.add('turn-static', forward ? 'left' : 'right');
-          layer.append(fixed);
+          const fixedPaper = previous.querySelector(forward ? '.paper.left' : '.paper.right');
+          if (fixedPaper) {
+            const fixed = fixedPaper.cloneNode(true);
+            fixed.classList.add('turn-static', forward ? 'left' : 'right');
+            layer.append(fixed);
+          }
 
           const leaf = element('div', 'flip-leaf ' + (forward ? 'forward' : 'backward'));
           const front = element('div', 'flip-face flip-front');
@@ -384,21 +531,28 @@
           const fs = element('div', 'flip-shade');
           const bs = element('div', 'flip-shade');
 
-          front.append(previous.querySelector(forward ? '.paper.right' : '.paper.left').cloneNode(true), fs);
-          back.append(next.querySelector(forward ? '.paper.left' : '.paper.right').cloneNode(true), bs);
+          const prevTurningPaper = previous.querySelector(forward ? '.paper.right' : '.paper.left');
+          const nextTurningPaper = next.querySelector(forward ? '.paper.left' : '.paper.right');
+
+          if (prevTurningPaper) front.append(prevTurningPaper.cloneNode(true), fs);
+          if (nextTurningPaper) back.append(nextTurningPaper.cloneNode(true), bs);
           leaf.append(front, back);
 
           const cast = element('div', 'turn-cast' + (forward ? '' : ' from-right'));
           Object.assign(cast.style, { zIndex: 2, left: forward ? '50%' : '0', right: forward ? '0' : '50%' });
           layer.append(cast, leaf);
 
-          animation = leaf.animate([{ transform: 'rotateY(0deg)' }, { transform: `rotateY(${forward ? -180 : 180}deg)` }], { duration: d, easing: ease, fill: 'forwards' });
-          fs.animate([{ opacity: 0 }, { opacity: 1 }], { duration: d / 2, easing: 'ease-in', fill: 'forwards' });
-          bs.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
-          cast.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
+          animation = leaf.animate(
+            [{ transform: 'rotateY(0deg)' }, { transform: `rotateY(${forward ? -180 : 180}deg)` }],
+            { duration: d, easing: ease, fill: 'forwards' }
+          );
+          fs.animate([{ opacity: 0 }, { opacity: 0.75 }], { duration: d / 2, easing: 'ease-in', fill: 'forwards' });
+          bs.animate([{ opacity: 0.75 }, { opacity: 0.75, offset: .5 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
+          cast.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
         }
         await animation.finished;
-      } catch {} finally {
+      } catch (err) {
+      } finally {
         layer.remove();
         animation = null;
       }
@@ -406,15 +560,12 @@
 
     turning = false;
     updateChrome();
-    effects.onPage(pages[current]);
+    effects.onPage(spreads[current]);
 
-    // Preload next spread images
-    const following = pages[current + 1];
-    if (following?.ids) {
-      following.ids.forEach(id => {
-        const im = new Image();
-        im.src = byId.get(id).src;
-      });
+    const nextSpread = spreads[current + 1];
+    if (nextSpread?.moment?.src) {
+      const im = new Image();
+      im.src = nextSpread.moment.src;
     }
   }
 
@@ -427,48 +578,66 @@
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-goto]');
     if (b) showPage(Number(b.dataset.goto));
-    if (e.target.closest('[data-save-letter]')) saveLetter();
+    if (e.target.closest('[data-save-letter]')) downloadLetter();
   });
 
   function openContents() {
     contents.showModal();
-    const currentButton = contents.querySelector('[aria-current=page]');
-    if (currentButton) currentButton.focus();
+    const currentBtn = contents.querySelector('[aria-current=page]');
+    if (currentBtn) currentBtn.focus();
   }
 
   $('#open-contents').addEventListener('click', openContents);
   $('#page-indicator').addEventListener('click', openContents);
   $('#close-contents').addEventListener('click', () => contents.close());
 
-  function contentsEntry(name, start, chapterIndex, ids, summary) {
-    const button = element('button', 'contents-entry');
-    button.type = 'button';
-    button.dataset.chapterTarget = chapterIndex;
-    if (ids?.length) {
-      const image = element('img');
-      image.src = byId.get(ids[0]).thumb;
-      image.alt = '';
-      image.width = 70;
-      image.height = 85;
-      button.append(image);
-    } else {
-      button.append(element('span', 'contents-icon', chapterIndex === -1 ? '🌿' : '❤️'));
-    }
-    const text = element('span', 'contents-entry-copy');
-    text.append(
-      element('small', '', chapterIndex === -1 ? 'TRANG BÌA' : chapterIndex === 5 ? 'LÁ THƯ TÌNH' : 'CHƯƠNG ' + pad(chapterIndex + 1)),
-      element('strong', '', name),
-      element('span', '', summary)
-    );
-    button.append(text, element('span', 'contents-page', pad(start + 1) + ' ↗'));
-    button.addEventListener('click', () => { contents.close(); showPage(start); });
-    $('#contents-list').append(button);
+  function buildTableOfContents() {
+    const list = $('#contents-list');
+    list.replaceChildren();
+
+    spreads.forEach((s, idx) => {
+      const btn = element('button', 'contents-entry');
+      btn.type = 'button';
+      btn.dataset.chapterTarget = s.chapter;
+
+      if (s.moment?.thumb) {
+        const img = element('img');
+        img.src = s.moment.thumb;
+        img.alt = '';
+        img.width = 60;
+        img.height = 70;
+        btn.append(img);
+      } else if (s.kind === 'cover') {
+        const img = element('img');
+        img.src = albumData.coverSpread?.thumb || 'thumbs/1.jpg';
+        img.alt = '';
+        img.width = 60;
+        img.height = 70;
+        btn.append(img);
+      } else {
+        btn.append(element('span', 'contents-icon', '💌'));
+      }
+
+      const copy = element('span', 'contents-entry-copy');
+      const chInfo = albumData.chapters?.find(c => c.index === s.chapter);
+      const tagLabel = s.kind === 'cover' ? 'TRANG BÌA' : s.kind === 'letter' ? 'LÁ THƯ TÌNH' : (chInfo ? chInfo.title.split('—')[0].trim() : getChapterName(s.chapter));
+      copy.append(
+        element('small', '', tagLabel),
+        element('strong', '', s.title),
+        element('span', '', s.subtitle)
+      );
+      btn.append(copy, element('span', 'contents-page', `Trang ${pad(s.pageNum)} ↗`));
+
+      btn.addEventListener('click', () => {
+        contents.close();
+        showPage(idx);
+      });
+      list.append(btn);
+    });
   }
+  buildTableOfContents();
 
-  contentsEntry('Bốn năm bên em, ngàn điều thương nhớ.', 0, -1, null, 'Bìa album kỷ niệm 12.11');
-  chapters.forEach((c, i) => contentsEntry(c.name, c.start, i, c.ids, c.letter ? '2 trang thư gửi Boss' : `${c.ids.length} khoảnh khắc`));
-
-  // Swipe support
+  // Touch Swipe
   let swipe = null, lastSwipe = 0;
   frame.addEventListener('pointerdown', e => {
     if (e.isPrimary && e.button === 0) swipe = { x: e.clientX, y: e.clientY };
@@ -477,7 +646,7 @@
     if (!swipe) return;
     const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
     swipe = null;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
       lastSwipe = Date.now();
       showPage(current + (dx < 0 ? 1 : -1));
     }
@@ -490,51 +659,65 @@
     }
   }, true);
 
-  // Lightbox
-  function drawPhoto() {
-    const photo = photos[currentPhoto];
-    $('#lightbox-image').src = photo.src;
-    $('#lightbox-image').alt = captions[photo.id] || photo.label;
-    $('#photo-count').textContent = `${pad(currentPhoto + 1)} / ${photos.length}`;
-    $('#photo-caption').textContent = captions[photo.id] || photo.label;
-    $('#prev-photo').disabled = currentPhoto === 0;
-    $('#next-photo').disabled = currentPhoto === photos.length - 1;
-  }
-
-  document.addEventListener('click', e => {
-    const button = e.target.closest('[data-photo]');
-    if (!button) return;
-    lastPhotoId = button.dataset.photo;
-    currentPhoto = photos.findIndex(p => p.id === lastPhotoId);
-    drawPhoto();
-    lightbox.showModal();
-  });
-
-  function changePhoto(n) {
-    const next = currentPhoto + n;
-    if (next >= 0 && next < photos.length) {
-      currentPhoto = next;
-      drawPhoto();
-    }
-  }
-
-  $('#prev-photo').addEventListener('click', () => changePhoto(-1));
-  $('#next-photo').addEventListener('click', () => changePhoto(1));
-  $('#close-photo').addEventListener('click', () => lightbox.close());
-
   // Keyboard navigation
   document.addEventListener('keydown', e => {
     if (lightbox.open) {
-      if (e.key === 'ArrowRight') { e.preventDefault(); changePhoto(1); }
-      if (e.key === 'ArrowLeft') { e.preventDefault(); changePhoto(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); changeLightboxPhoto(1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); changeLightboxPhoto(-1); }
+      if (e.key === 'Escape') { lightbox.close(); }
       return;
     }
-    if (contents.open || e.altKey || e.ctrlKey || e.metaKey || e.target.matches('input,textarea,select')) return;
+    if (contents.open || e.altKey || e.ctrlKey || e.metaKey || e.target.matches('input,textarea,select,video')) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); showPage(current + 1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); showPage(current - 1); }
     if (e.key === 'Home') { e.preventDefault(); showPage(0); }
-    if (e.key === 'End') { e.preventDefault(); showPage(pages.length - 1); }
+    if (e.key === 'End') { e.preventDefault(); showPage(spreads.length - 1); }
   });
+
+  // Lightbox
+  const lightboxList = photos.filter(p => p.type === 'photo');
+  let lightboxIdx = 0;
+
+  function drawLightbox() {
+    const p = lightboxList[lightboxIdx];
+    if (!p) return;
+    const img = $('#lightbox-image');
+    img.src = p.src;
+    img.alt = p.title || p.label;
+    $('#photo-count').textContent = `${pad(lightboxIdx + 1)} / ${lightboxList.length}`;
+    $('#photo-caption').textContent = `${p.title ? p.title + ' — ' : ''}${p.text || p.label}`;
+    $('#prev-photo').disabled = lightboxIdx === 0;
+    $('#next-photo').disabled = lightboxIdx === lightboxList.length - 1;
+  }
+
+  function changeLightboxPhoto(offset) {
+    const nextIdx = lightboxIdx + offset;
+    if (nextIdx >= 0 && nextIdx < lightboxList.length) {
+      lightboxIdx = nextIdx;
+      const img = $('#lightbox-image');
+      img.animate([
+        { opacity: 0.4, transform: `scale(0.96) translateX(${offset > 0 ? '40px' : '-40px'})` },
+        { opacity: 1, transform: 'scale(1) translateX(0)' }
+      ], { duration: 250, easing: 'ease-out' });
+      drawLightbox();
+    }
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-photo]');
+    if (!btn) return;
+    const photoId = btn.dataset.photo;
+    const foundIdx = lightboxList.findIndex(p => String(p.pageNum) === photoId || String(p.id) === photoId);
+    if (foundIdx !== -1) {
+      lightboxIdx = foundIdx;
+      drawLightbox();
+      lightbox.showModal();
+    }
+  });
+
+  $('#prev-photo').addEventListener('click', () => changeLightboxPhoto(-1));
+  $('#next-photo').addEventListener('click', () => changeLightboxPhoto(1));
+  $('#close-photo').addEventListener('click', () => lightbox.close());
 
   for (const dialog of [contents, lightbox]) {
     dialog.addEventListener('click', e => {
@@ -544,67 +727,106 @@
     });
   }
 
-  function saveLetter() {
-    const clone = letterSource.cloneNode(true);
-    clone.querySelector('.letter-actions')?.remove();
-    clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-    const text = [...clone.children].map(el => el.textContent.trim()).join('\n\n');
-    const url = URL.createObjectURL(new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' }));
-    const link = element('a');
-    link.href = url;
-    link.download = 'Thu-tinh-gui-Boss-12-11.txt';
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Hard Cover 3D Open
+  function openBook() {
+    if (!bookClosed) return Promise.resolve();
+    if (opening) return opening;
+
+    loveMusic.flipSound();
+    opening = (async () => {
+      const cover = frame.querySelector('.hard-cover');
+      if (!cover) {
+        bookClosed = false;
+        frame.classList.remove('book-closed', 'book-opening');
+        document.body.classList.remove('is-closed');
+        return;
+      }
+
+      const isMobile = matchMedia('(max-width: 760px)').matches;
+      const d = isMobile ? 1100 : 1350;
+      frame.classList.add('book-opening');
+      frame.classList.remove('book-closed');
+
+      const turn = cover.animate(
+        [{ transform: 'perspective(2400px) rotateY(0deg)' }, { transform: 'perspective(2400px) rotateY(-180deg)' }],
+        { duration: d, easing: 'cubic-bezier(.5, .05, .25, 1)', fill: 'forwards' }
+      );
+      if (isMobile) {
+        cover.animate([{ opacity: 1 }, { opacity: 1, offset: .6 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
+      }
+      try { await turn.finished; } catch {}
+      cover.remove();
+      frame.classList.remove('book-opening');
+      document.body.classList.remove('is-closed');
+      bookClosed = false;
+      opening = null;
+      book.querySelector('.primary-button')?.focus({ preventScroll: true });
+    })();
+    return opening;
   }
 
-  addEventListener('hashchange', () => showPage(hashPage(), false));
-  addEventListener('resize', () => { if (animation) animation.finish(); });
-
-  showPage(hashPage(), false);
-
-  // Hard cover state on load
-  if (current === 0 && !reduced.matches) {
+  function setupHardCover() {
     bookClosed = true;
     document.body.classList.add('is-closed');
     frame.classList.add('book-closed');
+
+    frame.querySelector('.hard-cover')?.remove();
+
     const cover = element('div', 'hard-cover');
     cover.setAttribute('role', 'button');
     cover.tabIndex = 0;
     cover.setAttribute('aria-label', 'Mở cuốn album của Boss');
 
+    const hc = albumData.hardCover || {};
     const front = element('div', 'hc-face hc-front');
     const title = element('h1');
-    title.append(
-      document.createTextNode('Bốn năm '),
-      element('em', '', 'bên em'),
-      document.createTextNode(', ngàn điều thương nhớ.')
-    );
+    if (hc.title) {
+      if (hc.title.includes('<')) {
+        title.innerHTML = hc.title;
+      } else {
+        title.textContent = hc.title;
+      }
+    } else {
+      title.append(
+        document.createTextNode('Trạm Dừng '),
+        element('em', '', 'Thứ 4.')
+      );
+    }
     const fig = element('figure', 'hc-photo');
     const img = element('img');
-    img.src = byId.get('5').src;
-    img.alt = '';
+    img.src = hc.coverPhoto || 'photos/cover.jpg';
+    img.alt = 'Ảnh bìa Boss';
     img.draggable = false;
     fig.append(img);
 
     front.append(
-      element('span', 'hc-over', 'KỶ NIỆM TÌNH YÊU · 12.11'),
-      title,
+      element('span', 'hc-over', hc.overline || 'KỶ NIỆM TÌNH YÊU · 12.11'),
+      title
+    );
+    if (hc.subtitle) {
+      front.append(element('p', 'hc-sub', hc.subtitle));
+    }
+    front.append(
       fig,
-      element('span', 'hc-name', 'MY BOSS'),
-      element('span', 'hc-date', '12.11.2021 — 12.11.2025'),
-      element('span', 'hc-open', 'Chạm để mở album ✨')
+      element('span', 'hc-name', hc.name || 'MY BOSS'),
+      element('span', 'hc-date', hc.date || '12.11.2022 — 12.11.2026'),
+      element('span', 'hc-open', hc.button_text || 'Chạm để mở album ✨')
     );
 
     const back = element('div', 'hc-face hc-back');
-    if (matchMedia('(max-width:760px)').matches) {
+    if (matchMedia('(max-width: 760px)').matches) {
       back.classList.add('hc-endpaper');
     } else {
-      back.append(book.querySelector('.paper.left').cloneNode(true));
+      const leftPaper = book.querySelector('.paper.left');
+      if (leftPaper) back.append(leftPaper.cloneNode(true));
     }
     cover.append(front, back);
     frame.append(cover);
 
-    cover.addEventListener('click', e => { e.stopPropagation(); openBook(); });
+    cover.addEventListener('click', e => {
+      e.stopPropagation();
+      openBook();
+    });
     cover.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -612,7 +834,6 @@
         openBook();
       }
     });
-    setTimeout(() => cover.focus({ preventScroll: true }), 60);
   }
 
   function fitBook() {
@@ -625,36 +846,23 @@
   }
   fitBook();
   addEventListener('resize', fitBook);
+  addEventListener('hashchange', () => {
+    const target = hashPage();
+    if (target !== current) {
+      showPage(target, true);
+    }
+  });
 
-  function openBook() {
-    if (!bookClosed) return Promise.resolve();
-    if (opening) return opening;
-    opening = (async () => {
-      const cover = frame.querySelector('.hard-cover');
-      const mobile = matchMedia('(max-width:760px)').matches;
-      const d = mobile ? 1150 : 1500;
-      frame.classList.add('book-opening');
-      frame.classList.remove('book-closed');
-      const turn = cover.animate(
-        [{ transform: 'perspective(2200px) rotateY(0deg)' }, { transform: 'perspective(2200px) rotateY(-180deg)' }],
-        { duration: d, easing: 'cubic-bezier(.5,.05,.25,1)', fill: 'forwards' }
-      );
-      if (mobile) cover.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
-      try { await turn.finished; } catch {}
-      cover.remove();
-      frame.classList.remove('book-opening');
-      document.body.classList.remove('is-closed');
-      bookClosed = false;
-      opening = null;
-      book.querySelector('.primary-button')?.focus({ preventScroll: true });
-    })();
-    return opening;
+  // INITIALIZATION:
+  const startPage = hashPage();
+  mountSpread(startPage);
+
+  if (startPage === 0) {
+    setupHardCover();
   }
 
-  // Music controls
+  // Music toggle controls
   const musicButton = $('#music-toggle');
-  const loveMusic = window.BossMusic.createPlayer();
-
   function musicLabel(playing) {
     musicButton.setAttribute('aria-pressed', String(playing));
     musicButton.setAttribute('aria-label', playing ? 'Tắt nhạc' : 'Bật nhạc');
@@ -670,13 +878,10 @@
     musicLabel(on);
   }
 
-  function pauseMusic() { loveMusic.stop(); }
-
   async function startMusic() {
     if (!musicWanted || loveMusic.playing || document.hidden) return;
     try {
       await loveMusic.play();
-      if (!musicWanted || document.hidden) { pauseMusic(); return; }
       $('.audio-status').textContent = 'Đang phát giai điệu tình yêu nhẹ nhàng.';
     } catch {
       $('.audio-status').textContent = 'Âm thanh chưa sẵn sàng.';
@@ -699,7 +904,7 @@
   musicButton.addEventListener('click', async () => {
     if (musicWanted) {
       rememberMusic(false);
-      pauseMusic();
+      loveMusic.stop();
       $('.audio-status').textContent = 'Đã tắt nhạc.';
       return;
     }
@@ -709,9 +914,33 @@
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pauseMusic();
+    if (document.hidden) loveMusic.stop();
     else armMusic();
   });
-  window.addEventListener('pagehide', pauseMusic);
-})();
+  window.addEventListener('pagehide', () => loveMusic.stop());
 
+  function downloadLetter() {
+    const l1 = albumData.letterPages?.['23'] || {};
+    const l2 = albumData.letterPages?.['24'] || {};
+    const textLines = [
+      '12 tháng 11 · Kỷ niệm 4 năm tình yêu',
+      '',
+      l1.greeting || 'Gửi Boss của anh,',
+      '',
+      ...(l1.paragraphs || []),
+      '',
+      ...(l2.paragraphs || []),
+      '',
+      l2.wish || 'Chúc mừng kỷ niệm 4 năm tình yêu của chúng mình! ❤️',
+      '',
+      l2.signature || 'Yêu và thương Boss thật nhiều,\nAnh của em'
+    ];
+    const text = textLines.join('\n\n');
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' }));
+    const a = element('a');
+    a.href = url;
+    a.download = 'Thu-tinh-gui-Boss-12-11.txt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+})();

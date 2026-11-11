@@ -6,7 +6,6 @@
   const cycleBeats = 32;
 
   // Romantic melody: "Can't Help Falling in Love" inspired sweet acoustic motif
-  // [MIDI note, duration in beats]
   const melody = [
     // Phrase 1: Wise men say...
     [67, 1.5], [71, 1.5], [74, 3],
@@ -33,7 +32,6 @@
   ];
 
   // Warm chord progressions (Root + Third + Fifth arpeggio)
-  // [beat, [bass, mid1, mid2]]
   const harmony = [
     [0, [48, 55, 60]],  // C
     [3, [47, 55, 59]],  // G/B
@@ -81,15 +79,12 @@
     let cursor = 0;
     melody.forEach(([note, duration]) => {
       const length = Math.min(2.2, duration * beat + 0.45);
-      // Main melody tone (music box bell)
       tone(note, cursor, length, 0.095);
-      // Warm overtone
       tone(note, cursor, length * 0.6, 0.022, 'sine', 2);
       tone(note, cursor, length * 0.35, 0.008, 'triangle', 3);
       cursor += duration;
     });
 
-    // Gentle chord arpeggio
     harmony.forEach(([at, chord]) => {
       tone(chord[0] - 12, at, 1.2, 0.06, 'sine');
       [0, 1, 2].forEach((offset, i) => {
@@ -97,7 +92,6 @@
       });
     });
 
-    // Ending shimmering chime
     [60, 64, 67, 72, 76, 84].forEach((note, i) => {
       tone(note, 30 + i * 0.15, 1.4, 0.022, 'sine');
     });
@@ -105,7 +99,6 @@
     return start + (cursor + 2) * beat;
   }
 
-  // Silent WAV for iOS Audio unlock
   function silentWavUrl() {
     const rate = 8000, n = rate / 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
     const w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
@@ -120,6 +113,7 @@
 
   function createPlayer() {
     let context, master, timer, pauseTimer, playing = false, starting = null, nextCycle = 0, keepAlive = null;
+    let isDucked = false;
     const voices = new Set();
 
     function schedule() {
@@ -128,19 +122,26 @@
       }
     }
 
+    function initContext() {
+      if (!context) {
+        const Audio = window.AudioContext || window.webkitAudioContext;
+        if (!Audio) return null;
+        context = new Audio();
+        master = context.createGain();
+        master.connect(context.destination);
+      }
+      return context;
+    }
+
     return {
       get playing() { return playing; },
       play() {
         if (playing) return Promise.resolve();
         if (starting) return starting;
         clearTimeout(pauseTimer);
-        const Audio = window.AudioContext || window.webkitAudioContext;
-        if (!Audio) return Promise.reject(new Error('Audio is unavailable'));
-        if (!context) {
-          context = new Audio();
-          master = context.createGain();
-          master.connect(context.destination);
-        }
+        const ctx = initContext();
+        if (!ctx) return Promise.reject(new Error('Audio is unavailable'));
+
         try {
           if (!keepAlive) {
             keepAlive = new window.Audio(silentWavUrl());
@@ -151,22 +152,22 @@
         } catch {}
 
         try {
-          const tick = context.createBufferSource();
-          tick.buffer = context.createBuffer(1, 1, 22050);
-          tick.connect(context.destination);
+          const tick = ctx.createBufferSource();
+          tick.buffer = ctx.createBuffer(1, 1, 22050);
+          tick.connect(ctx.destination);
           tick.start(0);
         } catch {}
 
-        const resumed = context.resume();
+        const resumed = ctx.resume();
         starting = (async () => {
           try {
             await Promise.race([resumed, new Promise(r => setTimeout(r, 700))]);
-            if (context.state !== 'running') throw new Error('Audio blocked until user interaction');
-            master.gain.cancelScheduledValues(context.currentTime);
-            master.gain.setValueAtTime(0, context.currentTime);
-            master.gain.linearRampToValueAtTime(0.7, context.currentTime + 0.05);
+            if (ctx.state !== 'running') throw new Error('Audio blocked until user interaction');
+            master.gain.cancelScheduledValues(ctx.currentTime);
+            master.gain.setValueAtTime(0, ctx.currentTime);
+            master.gain.linearRampToValueAtTime(isDucked ? 0.08 : 0.7, ctx.currentTime + 0.05);
             playing = true;
-            nextCycle = context.currentTime + 0.05;
+            nextCycle = ctx.currentTime + 0.05;
             schedule();
             timer = setInterval(schedule, 200);
           } finally {
@@ -192,10 +193,50 @@
             context.suspend().catch(() => {});
           }
         }, 60);
+      },
+      duck() {
+        if (!context || !master || !playing) return;
+        isDucked = true;
+        master.gain.cancelScheduledValues(context.currentTime);
+        master.gain.setTargetAtTime(0.08, context.currentTime, 0.15);
+      },
+      unduck() {
+        if (!context || !master || !playing) return;
+        isDucked = false;
+        master.gain.cancelScheduledValues(context.currentTime);
+        master.gain.setTargetAtTime(0.7, context.currentTime, 0.25);
+      },
+      flipSound() {
+        try {
+          const ctx = initContext();
+          if (!ctx) return;
+          if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+          }
+          const len = Math.floor(ctx.sampleRate * 0.12);
+          const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.035));
+          }
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(1400, ctx.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.12);
+          filter.Q.value = 1.0;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.2, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+          src.connect(filter);
+          filter.connect(g);
+          g.connect(ctx.destination);
+          src.start();
+        } catch {}
       }
     };
   }
 
   window.BossMusic = Object.freeze({ createPlayer });
 })();
-
